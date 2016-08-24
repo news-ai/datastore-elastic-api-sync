@@ -1,0 +1,11 @@
+APScheduler==3.1.0
+certifi==2016.2.28
+elasticsearch==2.3.0
+funcsigs==1.0.2
+futures==3.0.5
+pytz==2016.4
+requests==2.10.0
+six==1.10.0
+tzlocal==1.2.2
+urllib3==1.15.1
+wheel==0.24.0
