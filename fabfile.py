@@ -2,7 +2,6 @@
 from fabric.api import *
 
 env.hosts = [
-    '162.209.99.95'
 ]
 
 env.user = "root"
@@ -22,13 +21,13 @@ def update_server():
 
 
 def celery_purge():
-    with cd("/var/apps/elastic-api-sync"), prefix('source /var/apps/env/bin/activate'):
-        with cd("/var/apps/elastic-api-sync"):
+    with cd("/var/apps/datastore-elastic-api-sync"), prefix('source /var/apps/env/bin/activate'):
+        with cd("/var/apps/datastore-elastic-api-sync"):
             run('python sync.py')
 
 
 def deploy():
-    with cd("/var/apps/elastic-api-sync"), prefix('source /var/apps/env/bin/activate'):
-        with cd("/var/apps/elastic-api-sync"):
+    with cd("/var/apps/datastore-elastic-api-sync"), prefix('source /var/apps/env/bin/activate'):
+        with cd("/var/apps/datastore-elastic-api-sync"):
             run('git pull origin master')
             run('pip install -r requirements.txt')
