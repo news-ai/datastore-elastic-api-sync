@@ -15,6 +15,7 @@ from gcloud import datastore
 ELASTICSEARCH_USER = os.environ['NEWSAI_ELASTICSEARCH_USER']
 ELASTICSEARCH_PASSWORD = os.environ['NEWSAI_ELASTICSEARCH_PASSWORD']
 
+# Setup datastore connection for Google Cloud
 client = datastore.Client('newsai-1166')
 
 # Removing requests warning
@@ -36,6 +37,8 @@ def sync_es(index_name, kind, result_type):
     to_append = []
     query = client.query(kind=kind)
     for result in query.fetch():
+        result_id = result.key.id
+        result['id'] = int(result_id)
         doc = {
             '_type': result_type,
             '_index': index_name,
@@ -46,19 +49,14 @@ def sync_es(index_name, kind, result_type):
     print res
 
 
-def create_alias(index, name):
-    es.indices.put_alias(index=index, name=name)
-
-
-def reset_elastic(kind, name):
+def reset_elastic(kind):
     es.indices.delete(index=kind, ignore=[400, 404])
     es.indices.create(index=kind, ignore=[400, 404])
-    create_alias(kind, name)
 
 # Publications
-# reset_elastic('publications_v1', 'publications')
+# reset_elastic('publications')
 # sync_es('publications', 'Publication', 'publication')
 
 # Agencies
-# reset_elastic('agencies_v1', 'agencies')
+# reset_elastic('agencies')
 # sync_es('agencies', 'Agency', 'agency')
