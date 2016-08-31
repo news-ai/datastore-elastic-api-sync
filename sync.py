@@ -38,7 +38,7 @@ def sync_es(index_name, kind, result_type):
     query = client.query(kind=kind)
     for result in query.fetch():
         result_id = result.key.id
-        result['id'] = int(result_id)
+        result['Id'] = int(result_id)
         doc = {
             '_type': result_type,
             '_index': index_name,
