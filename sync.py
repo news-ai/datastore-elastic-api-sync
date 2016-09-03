@@ -36,17 +36,34 @@ es = Elasticsearch(
 def sync_es(index_name, kind, result_type):
     to_append = []
     query = client.query(kind=kind)
+    limit = 0
+    total = 0
     for result in query.fetch():
+        print result
         result_id = result.key.id
         result['Id'] = int(result_id)
+
+        if 'CustomFields.Name' in result:
+            del result['CustomFields.Name']
+
+        if 'CustomFields.Value' in result:
+            del result['CustomFields.Value']
+
         doc = {
             '_type': result_type,
             '_index': index_name,
             'data': result
         }
+        print limit
+        if limit == 100:
+            res = helpers.bulk(es, to_append)
+            print res
+            to_append = []
+            limit = 0
         to_append.append(doc)
-    res = helpers.bulk(es, to_append)
-    print res
+        limit = limit + 1
+        total = total + 1
+        print total
 
 
 def reset_elastic(kind):
@@ -60,3 +77,7 @@ def reset_elastic(kind):
 # Agencies
 # reset_elastic('agencies')
 # sync_es('agencies', 'Agency', 'agency')
+
+# Agencies
+# reset_elastic('contacts')
+# sync_es('contacts', 'Contact', 'contact')
