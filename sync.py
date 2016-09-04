@@ -58,6 +58,10 @@ def sync_es(index_name, kind, result_type):
         limit = limit + 1
         total = total + 1
         print total
+    # If there are any that weren't processed at the end
+    if len(to_append) > 0:
+        res = helpers.bulk(es, to_append)
+        print res
 
 
 def sync_list_contacts():
