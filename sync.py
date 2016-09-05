@@ -134,28 +134,34 @@ def sync_lists_contacts_hourly():
     query = client.query(kind='MediaList')
     for media_list in query.fetch():
         if 'Contacts' in media_list:
+            to_append = []
+            limit = 0
             for contact_id in media_list['Contacts']:
-                # If it contains then we update the record
+                # If it contains then we delete the record (to recreate)
                 if contact_id in contact_id_to_contact:
                     # If contact exists
                     elastic_contact = search_contact_in_elastic(contact_id)
                     doc = contact_struct_to_es(contact_id_to_contact[
                                                contact_id], media_list)
-                    print doc
                     if elastic_contact and 'hits' in elastic_contact and 'hits' in elastic_contact['hits'] and len(elastic_contact['hits']['hits']) > 0:
                         elastic_contact_id = elastic_contact[
                             'hits']['hits'][0]['_id']
                         res = es.delete(
                             index='contacts', doc_type='contact', id=elastic_contact_id)
-                        print res
+                    to_append.append(doc)
 
-                        # Post to ES
-                        res = helpers.bulk(es, [doc])
+                    if limit == 100:
+                        res = helpers.bulk(es, to_append)
                         print res
-                    # If contact does not exist
-                    else:
-                        res = helpers.bulk(es, [doc])
-                        print res
+                        to_append = []
+                        limit = 0
+
+                    limit = limit + 1
+
+            # If any left at the end
+            if len(to_append) > 0:
+                res = helpers.bulk(es, to_append)
+                print res
 
 
 def reset_elastic(kind):
