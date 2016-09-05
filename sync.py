@@ -64,6 +64,27 @@ def sync_es(index_name, kind, result_type):
         print res
 
 
+def contact_struct_to_es(contact, media_list):
+    if 'CustomFields.Name' in contact:
+        del contact['CustomFields.Name']
+    if 'CustomFields.Value' in contact:
+        del contact['CustomFields.Value']
+
+    contact_id = contact.key.id
+    contact['Id'] = int(contact_id)
+
+    media_list_id = media_list.key.id
+    contact['ListId'] = int(media_list_id)
+
+    doc = {
+        '_type': 'contact',
+        '_index': 'contacts',
+        'data': contact
+    }
+
+    return doc
+
+
 def sync_list_contacts():
     query = client.query(kind='MediaList')
     total = 0
@@ -74,26 +95,7 @@ def sync_list_contacts():
             for contact_id in media_list['Contacts']:
                 key = client.key('Contact', int(contact_id))
                 contact = client.get(key)
-
-                print contact
-
-                if 'CustomFields.Name' in contact:
-                    del contact['CustomFields.Name']
-                if 'CustomFields.Value' in contact:
-                    del contact['CustomFields.Value']
-
-                contact_id = contact.key.id
-                contact['Id'] = int(contact_id)
-
-                media_list_id = media_list.key.id
-                contact['ListId'] = int(media_list_id)
-
-                doc = {
-                    '_type': 'contact',
-                    '_index': 'contacts',
-                    'data': contact
-                }
-
+                doc = contact_struct_to_es(contact, media_list)
                 to_append.append(doc)
 
                 if limit == 100:
@@ -111,7 +113,8 @@ def sync_list_contacts():
 
 
 def search_contact_in_elastic(contact_id):
-    es.search(index="contacts", body={"query": {"match_all": {}}})
+    res = es.search(index="contacts", body={
+                    "query": {"match": {"data.Id": contact_id}}})
 
 
 def sync_lists_contacts_hourly():
@@ -137,7 +140,22 @@ def sync_lists_contacts_hourly():
             for contact_id in media_list['Contacts']:
                 # If it contains then we update the record
                 if contact_id in contact_id_to_contact:
-                    print contact_id_to_contact[contact_id]
+                    # If contact exists
+                    elastic_contact = search_contact_in_elastic(contact_id)
+                    doc = contact_struct_to_es(contact_id_to_contact[
+                                               contact_id], media_list)
+                    if len(elastic_contact['hits']['hits']) > 0:
+                        elastic_contact_id = elastic_contact[
+                            'hits']['hits'][0]['_id']
+                        res = es.update(index='contacts',
+                                        doc_type='contact', id=elastic_contact_id, body=doc)
+                        print result
+                    # If contact does not exist
+                    else:
+                        to_append = []
+                        to_append.append(doc)
+                        res = helpers.bulk(es, to_append)
+                        print res
 
 
 def reset_elastic(kind):
