@@ -81,7 +81,6 @@ def contact_struct_to_es(contact, media_list):
         '_index': 'contacts',
         'data': contact
     }
-
     return doc
 
 
@@ -113,8 +112,8 @@ def sync_list_contacts():
 
 
 def search_contact_in_elastic(contact_id):
-    res = es.search(index="contacts", body={
-                    "query": {"match": {"data.Id": contact_id}}})
+    return es.search(index="contacts", body={
+        "query": {"match": {"data.Id": contact_id}}})
 
 
 def sync_lists_contacts_hourly():
@@ -135,8 +134,6 @@ def sync_lists_contacts_hourly():
     query = client.query(kind='MediaList')
     for media_list in query.fetch():
         if 'Contacts' in media_list:
-            to_append = []
-            limit = 0
             for contact_id in media_list['Contacts']:
                 # If it contains then we update the record
                 if contact_id in contact_id_to_contact:
@@ -144,17 +141,20 @@ def sync_lists_contacts_hourly():
                     elastic_contact = search_contact_in_elastic(contact_id)
                     doc = contact_struct_to_es(contact_id_to_contact[
                                                contact_id], media_list)
-                    if len(elastic_contact['hits']['hits']) > 0:
+                    print doc
+                    if elastic_contact and 'hits' in elastic_contact and 'hits' in elastic_contact['hits'] and len(elastic_contact['hits']['hits']) > 0:
                         elastic_contact_id = elastic_contact[
                             'hits']['hits'][0]['_id']
-                        res = es.update(index='contacts',
-                                        doc_type='contact', id=elastic_contact_id, body=doc)
-                        print result
+                        res = es.delete(
+                            index='contacts', doc_type='contact', id=elastic_contact_id)
+                        print res
+
+                        # Post to ES
+                        res = helpers.bulk(es, [doc])
+                        print res
                     # If contact does not exist
                     else:
-                        to_append = []
-                        to_append.append(doc)
-                        res = helpers.bulk(es, to_append)
+                        res = helpers.bulk(es, [doc])
                         print res
 
 
@@ -173,3 +173,4 @@ def reset_elastic(kind):
 # Agencies
 # reset_elastic('contacts')
 # sync_list_contacts()
+sync_lists_contacts_hourly()
