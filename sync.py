@@ -2,7 +2,7 @@
 import urllib3
 import os
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Third-party app imports
 import requests
@@ -110,6 +110,36 @@ def sync_list_contacts():
                 print res
 
 
+def search_contact_in_elastic(contact_id):
+    es.search(index="contacts", body={"query": {"match_all": {}}})
+
+
+def sync_lists_contacts_hourly():
+    an_hour_ago = datetime.today() - timedelta(hours=1)
+
+    # Find all contacts updated in the last hour
+    query = client.query(kind='Contact')
+    query.add_filter('Updated', '>', an_hour_ago)
+    contacts = list(query.fetch())
+
+    contact_id_to_contact = {}
+
+    for contact in contacts:
+        contact_id = contact.key.id
+        contact_id_to_contact[contact_id] = contact
+
+    # Go through each list
+    query = client.query(kind='MediaList')
+    for media_list in query.fetch():
+        if 'Contacts' in media_list:
+            to_append = []
+            limit = 0
+            for contact_id in media_list['Contacts']:
+                # If it contains then we update the record
+                if contact_id in contact_id_to_contact:
+                    print contact_id_to_contact[contact_id]
+
+
 def reset_elastic(kind):
     es.indices.delete(index=kind, ignore=[400, 404])
     es.indices.create(index=kind, ignore=[400, 404])
@@ -124,4 +154,4 @@ def reset_elastic(kind):
 
 # Agencies
 # reset_elastic('contacts')
-sync_list_contacts()
+# sync_list_contacts()
