@@ -179,4 +179,4 @@ def reset_elastic(kind):
 # Agencies
 # reset_elastic('contacts')
 # sync_list_contacts()
-sync_lists_contacts_hourly()
+# sync_lists_contacts_hourly()
