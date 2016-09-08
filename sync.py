@@ -174,7 +174,7 @@ def contact_id_to_es_sync(contact_id):
     contact = client.get(key)
 
     elastic_contact = search_contact_in_elastic(contact_id)
-    if elastic_contact:
+    if elastic_contact and 'hits' in elastic_contact and 'hits' in elastic_contact['hits'] and len(elastic_contact['hits']['hits']) > 0:
         elastic_contact_id = elastic_contact[
             'hits']['hits'][0]['_id']
         res = es.delete(
