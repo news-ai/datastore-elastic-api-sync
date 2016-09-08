@@ -172,6 +172,14 @@ def sync_lists_contacts_hourly():
 def contact_id_to_es_sync(contact_id):
     key = client.key('Contact', int(contact_id))
     contact = client.get(key)
+
+    elastic_contact = search_contact_in_elastic(contact_id)
+    if elastic_contact:
+        elastic_contact_id = elastic_contact[
+            'hits']['hits'][0]['_id']
+        res = es.delete(
+            index='contacts', doc_type='contact', id=elastic_contact_id)
+
     doc = contact_struct_to_es(contact, None)
     res = helpers.bulk(es, [doc])
     return True
@@ -191,5 +199,5 @@ def reset_elastic(kind):
 
 # Agencies
 # reset_elastic('contacts')
-# sync_list_contacts()
+sync_list_contacts()
 # sync_lists_contacts_hourly()
