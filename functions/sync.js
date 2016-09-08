@@ -157,11 +157,12 @@ function getAndSyncElastic(contact) {
                     delete: {
                         _index: 'contacts',
                         _type: 'contact',
-                        _id: esContact._id
+                        _id: hits[i]._id
                     }
                 };
-                esActions.append(eachRecord);
+                esActions.push(eachRecord);
             }
+
             client.bulk({
                 body: esActions
             }, function(error, response) {
@@ -218,24 +219,3 @@ exports.sync = function sync (context, data) {
         context.failure(err);
     });
 };
-
-// var testSync = function testSync (data) {
-//     getDatastore(data).then(function(contact) {
-//         if (contact != null) {
-//             getAndSyncElastic(contact).then(function(elasticResponse) {
-//                 console.log(elasticResponse);
-//                 if (elasticResponse) {
-//                     console.log('Success');
-//                 } else {
-//                     console.error('Elastic sync failed');
-//                 }
-//             });
-//         } else {
-//             console.error('Elastic sync failed');
-//         }
-//     }, function(error) {
-//         console.error(error);
-//     });
-// };
-
-// testSync({Id: 6332877872562176})
