@@ -11,6 +11,9 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from elasticsearch import Elasticsearch, helpers
 from gcloud import datastore
 
+# Imports from app
+from taskrunner import app
+
 # Elasticsearch
 ELASTICSEARCH_USER = os.environ['NEWSAI_ELASTICSEARCH_USER']
 ELASTICSEARCH_PASSWORD = os.environ['NEWSAI_ELASTICSEARCH_PASSWORD']
@@ -73,8 +76,9 @@ def contact_struct_to_es(contact, media_list):
     contact_id = contact.key.id
     contact['Id'] = int(contact_id)
 
-    media_list_id = media_list.key.id
-    contact['ListId'] = int(media_list_id)
+    if media_list:
+        media_list_id = media_list.key.id
+        contact['ListId'] = int(media_list_id)
 
     doc = {
         '_type': 'contact',
@@ -162,6 +166,15 @@ def sync_lists_contacts_hourly():
             if len(to_append) > 0:
                 res = helpers.bulk(es, to_append)
                 print res
+
+
+@app.task
+def contact_id_to_es_sync(contact_id):
+    key = client.key('Contact', int(contact_id))
+    contact = client.get(key)
+    doc = contact_struct_to_es(contact, None)
+    res = helpers.bulk(es, [doc])
+    return True
 
 
 def reset_elastic(kind):
