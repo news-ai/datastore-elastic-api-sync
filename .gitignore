@@ -89,3 +89,5 @@ ENV/
 .ropeproject
 
 celerybeat-schedule.db
+
+node_modules

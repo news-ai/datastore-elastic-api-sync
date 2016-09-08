@@ -34,6 +34,32 @@ es = Elasticsearch(
 )
 
 
+def contact_struct_to_es(contact, media_list):
+    if 'CustomFields.Name' in contact:
+        del contact['CustomFields.Name']
+    if 'CustomFields.Value' in contact:
+        del contact['CustomFields.Value']
+
+    contact_id = contact.key.id
+    contact['Id'] = int(contact_id)
+
+    if media_list:
+        media_list_id = media_list.key.id
+        contact['ListId'] = int(media_list_id)
+
+    doc = {
+        '_type': 'contact',
+        '_index': 'contacts',
+        'data': contact
+    }
+    return doc
+
+
+def search_contact_in_elastic(contact_id):
+    return es.search(index="contacts", body={
+        "query": {"match": {"data.Id": contact_id}}})
+
+
 @app.task
 def contact_id_to_es_sync(contact_id):
     key = client.key('Contact', int(contact_id))
