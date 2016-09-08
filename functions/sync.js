@@ -28,7 +28,10 @@ function getKeyFromRequestData(requestData) {
             'in your request');
     }
 
-    return datastore.key(['Contact', requestData.Id]);
+    var contactId = parseInt(requestData.Id, 10);
+
+
+    return datastore.key(['Contact', contactId]);
 }
 
 /**
@@ -148,11 +151,19 @@ function getAndSyncElastic(contact) {
 
         // Delete the current hit
         if (hits.length > 0) {
-            var esContact = hits[0];
-            client.delete({
-                index: 'contacts',
-                type: 'contact',
-                id: esContact._id
+            var esActions = [];
+            for (var i = hits.length - 1; i >= 0; i--) {
+                var eachRecord = {
+                    delete: {
+                        _index: 'contacts',
+                        _type: 'contact',
+                        _id: esContact._id
+                    }
+                };
+                esActions.append(eachRecord);
+            }
+            client.bulk({
+                body: esActions
             }, function(error, response) {
                 // Add a new index
                 addToElastic(contactId, contactData).then(function(status) {
