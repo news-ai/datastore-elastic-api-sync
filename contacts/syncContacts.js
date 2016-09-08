@@ -201,7 +201,7 @@ function getAndSyncElastic(contact) {
  * @param {Object} data Request data, in this case an object provided by the Pub/Sub trigger.
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
-exports.sync = function sync (context, data) {
+exports.syncContacts = function syncContacts (context, data) {
     getDatastore(data).then(function(contact) {
         if (contact != null) {
             getAndSyncElastic(contact).then(function(elasticResponse) {
