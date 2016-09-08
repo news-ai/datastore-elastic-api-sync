@@ -97,7 +97,7 @@ function formatESContact(contactId, contactData) {
 }
 
 /**
- * Format a contact for ES sync
+ * Add a contact to ES
  *
  * @param {Object} contactData Contact details from datastore.
  * Returns true if adding data works and false if not.
