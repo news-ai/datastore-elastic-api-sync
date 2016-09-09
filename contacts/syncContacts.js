@@ -22,7 +22,7 @@ var client = new elasticsearch.Client({
  * @param {string} requestData.Id Datastore ID string.
  * @returns {Object} Datastore key object.
  */
-function getKeyFromRequestData (requestData, resouceType) {
+function getKeyFromRequestData(requestData, resouceType) {
     if (!requestData.Id) {
         throw new Error('Id not provided. Make sure you have a "Id" property ' +
             'in your request');
@@ -45,7 +45,7 @@ function getKeyFromRequestData (requestData, resouceType) {
  * @param {string} data.kind The Datastore kind of the data to retrieve, e.g. "user".
  * @param {string} data.key Key at which to retrieve the data, e.g. 5075192766267392.
  */
-function getDatastore (data, resouceType) {
+function getDatastore(data, resouceType) {
     var deferred = Q.defer();
     try {
         var key = getKeyFromRequestData(data, resouceType);
@@ -75,7 +75,7 @@ function getDatastore (data, resouceType) {
     return deferred.promise;
 }
 
-function mediaListToContactMap (mediaListId) {
+function mediaListToContactMap(mediaListId) {
     var deferred = Q.defer();
 
     var data = {
@@ -100,7 +100,7 @@ function mediaListToContactMap (mediaListId) {
  *
  * @param {Object} contactData Contact details from datastore.
  */
-function formatESContact (contactId, contactData) {
+function formatESContact(contactId, contactData) {
     contactData['Id'] = contactId;
 
     if ('CustomFields.Name' in contactData) {
@@ -120,7 +120,7 @@ function formatESContact (contactId, contactData) {
  * @param {Object} contactData Contact details from datastore.
  * Returns true if adding data works and false if not.
  */
-function addToElastic (contactId, contactData) {
+function addToElastic(contactId, contactData) {
     var deferred = Q.defer();
 
     var postContactData = formatESContact(contactId, contactData);
@@ -151,7 +151,7 @@ function addToElastic (contactId, contactData) {
  *
  * @param {Object} contact Contact details from datastore.
  */
-function getAndSyncElastic (contact) {
+function getAndSyncElastic(contact) {
     var deferred = Q.defer();
 
     var contactData = contact.data;
@@ -208,13 +208,13 @@ function getAndSyncElastic (contact) {
         }
     }, function(err) {
         console.trace(err.message);
-        deferred.reject(new Error(error));
+        deferred.reject(new Error(err.message));
     });
 
     return deferred.promise;
 }
 
-function syncContact (data) {
+function syncContact(data) {
     var deferred = Q.defer();
     getDatastore(data, 'Contact').then(function(contact) {
         if (contact != null) {
@@ -236,7 +236,7 @@ function syncContact (data) {
         deferred.reject(new Error(error));
         throw new Error(error);
     });
-    return deferred.promise; 
+    return deferred.promise;
 }
 
 /**
@@ -248,11 +248,11 @@ function syncContact (data) {
  * @param {Object} data Request data, in this case an object provided by the Pub/Sub trigger.
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
-exports.syncContacts = function syncContacts (data) {
+exports.syncContacts = function syncContacts(data) {
     return syncContact(data);
 };
 
-function testSync (data) {
+function testSync(data) {
     return syncContact(data);
 };
 
