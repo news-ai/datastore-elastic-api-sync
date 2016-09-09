@@ -244,24 +244,20 @@ function syncContact (data) {
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
 exports.syncContacts = function syncContacts (context, data) {
-    var deferred = Q.defer();
-    syncContact(data).then(function (output) {
+    return syncContact(data).then(function (output) {
         context.success();
     }, function (error) {
         console.error(error);
         context.failure(error);
     });
-    return deferred.promise;
 };
 
 function testSync (data) {
-    var deferred = Q.defer();
-    syncContact(data).then(function (output) {
+    return syncContact(data).then(function (output) {
         console.log(output);
     }, function (error) {
         console.error(error);
     });
-    return deferred.promise;
 };
 
 // testSync({Id: '6095325244686336'})
