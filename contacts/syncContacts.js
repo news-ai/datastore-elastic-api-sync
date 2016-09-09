@@ -11,6 +11,7 @@ var datastore = require('@google-cloud/datastore')({
 // Instantiate a elasticsearch client
 var client = new elasticsearch.Client({
     host: 'https://newsai:XkJRNRx2EGCd6@search.newsai.org',
+    // log: 'trace',
     rejectUnauthorized: false
 });
 
@@ -213,6 +214,26 @@ function getAndSyncElastic (contact) {
     return deferred.promise;
 }
 
+function syncContact (data) {
+    var deferred = Q.defer();
+    getDatastore(data, 'Contact').then(function(contact) {
+        if (contact != null) {
+            getAndSyncElastic(contact).then(function(elasticResponse) {
+                if (elasticResponse) {
+                    deferred.resolve('Success!');
+                } else {
+                    deferred.reject(new Error('Elastic sync failed'));
+                }
+            });
+        } else {
+            deferred.reject(new Error('Contact not found'));
+        }
+    }, function(error) {
+        deferred.reject(new Error(error));
+    });
+    return deferred.promise; 
+}
+
 /**
  * Triggered from a message on a Pub/Sub topic.
  *
@@ -223,40 +244,24 @@ function getAndSyncElastic (contact) {
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
 exports.syncContacts = function syncContacts (context, data) {
-    getDatastore(data, 'Contact').then(function(contact) {
-        if (contact != null) {
-            getAndSyncElastic(contact).then(function(elasticResponse) {
-                if (elasticResponse) {
-                    context.success();
-                } else {
-                    context.failure('Elastic sync failed');
-                }
-            });
-        } else {
-            context.failure('Contact not found');
-        }
-    }, function(error) {
+    var deferred = Q.defer();
+    syncContact(data).then(function (output) {
+        context.success();
+    }, function (error) {
         console.error(error);
-        context.failure(err);
+        context.failure(error);
     });
+    return deferred.promise;
 };
 
 function testSync (data) {
-    getDatastore(data, 'Contact').then(function(contact) {
-        if (contact != null) {
-            getAndSyncElastic(contact).then(function(elasticResponse) {
-                if (elasticResponse) {
-                    console.log('Success!');
-                } else {
-                    console.log('Elastic sync failed');
-                }
-            });
-        } else {
-            console.log('Contact not found');
-        }
-    }, function(error) {
+    var deferred = Q.defer();
+    syncContact(data).then(function (output) {
+        console.log(output);
+    }, function (error) {
         console.error(error);
     });
+    return deferred.promise;
 };
 
 // testSync({Id: '6095325244686336'})
