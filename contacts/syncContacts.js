@@ -162,6 +162,7 @@ function getAndSyncElastic (contact) {
     client.search({
         index: 'contacts',
         type: 'contact',
+        size: 10000,
         body: {
             query: {
                 match: {

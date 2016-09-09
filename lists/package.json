@@ -1,8 +1,8 @@
 {
-  "name": "sync-publications",
+  "name": "sync-lists",
   "version": "0.0.1",
   "description": "Google Cloud Functions to sync between datastore and elasticsearch",
-  "main": "syncContacts.js",
+  "main": "syncLists.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
