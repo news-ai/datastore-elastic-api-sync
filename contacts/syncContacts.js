@@ -22,7 +22,7 @@ var client = new elasticsearch.Client({
  * @param {string} requestData.Id Datastore ID string.
  * @returns {Object} Datastore key object.
  */
-function getKeyFromRequestData(requestData) {
+function getKeyFromRequestData (requestData, resouceType) {
     if (!requestData.Id) {
         throw new Error('Id not provided. Make sure you have a "Id" property ' +
             'in your request');
@@ -31,7 +31,7 @@ function getKeyFromRequestData(requestData) {
     var contactId = parseInt(requestData.Id, 10);
 
 
-    return datastore.key(['Contact', contactId]);
+    return datastore.key([resouceType, contactId]);
 }
 
 /**
@@ -47,10 +47,10 @@ function getKeyFromRequestData(requestData) {
  * @param {string} data.kind The Datastore kind of the data to retrieve, e.g. "user".
  * @param {string} data.key Key at which to retrieve the data, e.g. 5075192766267392.
  */
-function getDatastore(data) {
+function getDatastore (data, resouceType) {
     var deferred = Q.defer();
     try {
-        var key = getKeyFromRequestData(data);
+        var key = getKeyFromRequestData(data, resouceType);
 
         datastore.get(key, function(err, entity) {
             if (err) {
@@ -77,12 +77,32 @@ function getDatastore(data) {
     return deferred.promise;
 }
 
+function mediaListToContactMap (mediaListId) {
+    var deferred = Q.defer();
+
+    var data = {
+        Id: mediaListId
+    };
+
+    getDatastore(data, 'MediaList').then(function(mediaList) {
+        if ('Contacts' in mediaList.data) {
+            var mediaListContactToHashMap = {};
+            for (var i = mediaList.data.Contacts.length - 1; i >= 0; i--) {
+                mediaListContactToHashMap[mediaList.data.Contacts[i]] = true;
+            }
+            deferred.resolve(mediaListContactToHashMap);
+        }
+    });
+
+    return deferred.promise;
+}
+
 /**
  * Format a contact for ES sync
  *
  * @param {Object} contactData Contact details from datastore.
  */
-function formatESContact(contactId, contactData) {
+function formatESContact (contactId, contactData) {
     contactData['Id'] = contactId;
 
     if ('CustomFields.Name' in contactData) {
@@ -102,23 +122,26 @@ function formatESContact(contactId, contactData) {
  * @param {Object} contactData Contact details from datastore.
  * Returns true if adding data works and false if not.
  */
-function addToElastic(contactId, contactData) {
+function addToElastic (contactId, contactData) {
     var deferred = Q.defer();
 
     var postContactData = formatESContact(contactId, contactData);
-    console.log(postContactData);
-    client.create({
-        index: 'contacts',
-        type: 'contact',
-        body: {
-            data: postContactData
-        }
-    }, function(error, response) {
-        if (error) {
-            console.error(error);
-            deferred.resolve(false);
-        } else {
-            deferred.resolve(true);
+    mediaListToContactMap(contactData['ListId']).then(function(mediaListContactToHashMap) {
+        if (contactId in mediaListContactToHashMap) {
+            client.create({
+                index: 'contacts',
+                type: 'contact',
+                body: {
+                    data: postContactData
+                }
+            }, function(error, response) {
+                if (error) {
+                    console.error(error);
+                    deferred.resolve(false);
+                } else {
+                    deferred.resolve(true);
+                }
+            });
         }
     });
 
@@ -130,7 +153,7 @@ function addToElastic(contactId, contactData) {
  *
  * @param {Object} contact Contact details from datastore.
  */
-function getAndSyncElastic(contact) {
+function getAndSyncElastic (contact) {
     var deferred = Q.defer();
 
     var contactData = contact.data;
@@ -202,7 +225,7 @@ function getAndSyncElastic(contact) {
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
 exports.syncContacts = function syncContacts (context, data) {
-    getDatastore(data).then(function(contact) {
+    getDatastore(data, 'Contact').then(function(contact) {
         if (contact != null) {
             getAndSyncElastic(contact).then(function(elasticResponse) {
                 if (elasticResponse) {
@@ -219,3 +242,23 @@ exports.syncContacts = function syncContacts (context, data) {
         context.failure(err);
     });
 };
+
+function testSync (data) {
+    getDatastore(data, 'Contact').then(function(contact) {
+        if (contact != null) {
+            getAndSyncElastic(contact).then(function(elasticResponse) {
+                if (elasticResponse) {
+                    console.log('Success!');
+                } else {
+                    console.log('Elastic sync failed');
+                }
+            });
+        } else {
+            console.log('Contact not found');
+        }
+    }, function(error) {
+        console.error(error);
+    });
+};
+
+// testSync({Id: '6743693507690496'})
