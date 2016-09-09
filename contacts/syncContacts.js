@@ -29,8 +29,6 @@ function getKeyFromRequestData (requestData, resouceType) {
     }
 
     var contactId = parseInt(requestData.Id, 10);
-
-
     return datastore.key([resouceType, contactId]);
 }
 
@@ -226,6 +224,7 @@ function getAndSyncElastic (contact) {
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
 exports.syncContacts = function syncContacts (context, data) {
+    console.log(data);
     getDatastore(data, 'Contact').then(function(contact) {
         if (contact != null) {
             getAndSyncElastic(contact).then(function(elasticResponse) {
