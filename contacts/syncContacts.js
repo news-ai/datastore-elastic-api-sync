@@ -11,7 +11,6 @@ var datastore = require('@google-cloud/datastore')({
 // Instantiate a elasticsearch client
 var client = new elasticsearch.Client({
     host: 'https://newsai:XkJRNRx2EGCd6@search.newsai.org',
-    log: 'trace',
     rejectUnauthorized: false
 });
 
@@ -224,7 +223,6 @@ function getAndSyncElastic (contact) {
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
 exports.syncContacts = function syncContacts (context, data) {
-    console.log(data);
     getDatastore(data, 'Contact').then(function(contact) {
         if (contact != null) {
             getAndSyncElastic(contact).then(function(elasticResponse) {
@@ -261,4 +259,4 @@ function testSync (data) {
     });
 };
 
-// testSync({Id: '6743693507690496'})
+// testSync({Id: '6095325244686336'})

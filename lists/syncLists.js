@@ -29,8 +29,6 @@ function getKeyFromRequestData (requestData, resouceType) {
     }
 
     var contactId = parseInt(requestData.Id, 10);
-
-
     return datastore.key([resouceType, contactId]);
 }
 
