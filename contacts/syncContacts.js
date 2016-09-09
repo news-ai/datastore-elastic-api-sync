@@ -222,14 +222,19 @@ function syncContact (data) {
                 if (elasticResponse) {
                     deferred.resolve('Success!');
                 } else {
-                    deferred.reject(new Error('Elastic sync failed'));
+                    var error = "Elastic sync failed";
+                    deferred.reject(new Error(error));
+                    throw new Error(error);
                 }
             });
         } else {
-            deferred.reject(new Error('Contact not found'));
+            var error = "Contact not found";
+            deferred.reject(new Error(error));
+            throw new Error(error);
         }
     }, function(error) {
         deferred.reject(new Error(error));
+        throw new Error(error);
     });
     return deferred.promise; 
 }
@@ -243,21 +248,12 @@ function syncContact (data) {
  * @param {Object} data Request data, in this case an object provided by the Pub/Sub trigger.
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
-exports.syncContacts = function syncContacts (context, data) {
-    return syncContact(data).then(function (output) {
-        context.success();
-    }, function (error) {
-        console.error(error);
-        context.failure(error);
-    });
+exports.syncContacts = function syncContacts (data) {
+    return syncContact(data);
 };
 
 function testSync (data) {
-    return syncContact(data).then(function (output) {
-        console.log(output);
-    }, function (error) {
-        console.error(error);
-    });
+    return syncContact(data);
 };
 
-// testSync({Id: '6095325244686336'})
+testSync({Id: '6095325244686336'})
