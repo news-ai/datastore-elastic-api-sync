@@ -256,4 +256,4 @@ function testSync (data) {
     return syncContact(data);
 };
 
-testSync({Id: '6095325244686336'})
+// testSync({Id: '6095325244686336'})
