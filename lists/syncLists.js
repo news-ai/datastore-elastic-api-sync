@@ -165,8 +165,32 @@ function syncList(data) {
                 }
             }
 
-            console.log(duplicateContactIds);
+            for (var i = duplicateContactIds.length - 1; i >= 0; i--) {
+                contactsToDelete.push(elasticContactList[duplicateContactIds[i]]);
+            }
+
             console.log(contactsToDelete);
+
+            // Remove unnecessary contacts
+            var esActions = [];
+            for (var i = contactsToDelete.length - 1; i >= 0; i--) {
+                var eachRecord = {
+                    delete: {
+                        _index: 'contacts',
+                        _type: 'contact',
+                        _id: contactsToDelete[i]
+                    }
+                };
+                esActions.push(eachRecord);
+            }
+
+            // Remove contacts
+            client.bulk({
+                body: esActions
+            }, function(error, response) {
+                deferred.resolve(true);
+            });
+
         }, function (error) {
             deferred.reject(new Error(error));
             throw new Error(error);
@@ -195,4 +219,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-testSync({Id: '4754319148580864'})
+testSync({Id: '5024727873617920'})
