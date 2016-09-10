@@ -75,6 +75,9 @@ function getDatastore(data, resouceType) {
     return deferred.promise;
 }
 
+/**
+ * Creates a easily searchable map of all contact Ids in a media list
+ */
 function mediaListToContactMap(mediaListId) {
     var deferred = Q.defer();
 
@@ -91,6 +94,10 @@ function mediaListToContactMap(mediaListId) {
     return deferred.promise;
 }
 
+/**
+ * Gets all the contacts in ElasticSearch for a particular list
+ * Returns a contact Id to ElasticId list and an array of duplicate mediaList ids
+ */
 function getElasticContactsByListId(listId) {
     var deferred = Q.defer();
 
@@ -110,6 +117,8 @@ function getElasticContactsByListId(listId) {
         var contactIdToElasticId = {};
         var duplicateContactIds = {};
 
+        // Create a map from API Contact Id to Elastic Id
+        // Create a map of contact Id to how many are present in the ES data
         for (var i = hits.length - 1; i >= 0; i--) {
             contactIdToElasticId[hits[i]._source.data.Id] = hits[i]._id;
 
@@ -119,10 +128,16 @@ function getElasticContactsByListId(listId) {
                 duplicateContactIds[hits[i]._source.data.Id] = 1;
             }
         }
-        
-        console.log(duplicateContactIds);
 
-        deferred.resolve(contactIdToElasticId, duplicateContactIds);
+        // Remove duplicateIds that have 1 as value
+        var duplicateKeys = Object.keys(duplicateContactIds);
+        for (var i = duplicateKeys.length - 1; i >= 0; i--) {
+            if (duplicateContactIds[duplicateKeys[i]] === 1) {
+                delete duplicateContactIds[duplicateKeys[i]];
+            }
+        }
+
+        deferred.resolve([contactIdToElasticId, Object.keys(duplicateContactIds)]);
     }, function(err) {
         console.trace(err.message);
         deferred.reject(new Error(err.message));
@@ -131,16 +146,18 @@ function getElasticContactsByListId(listId) {
     return deferred.promise;
 }
 
+/**
+ * Syncs our API media list with the media list in ElasticSearch
+ */
 function syncList(data) {
     var deferred = Q.defer();
     mediaListToContactMap(data).then(function(mediaListContactToMap) {
-        getElasticContactsByListId(data.Id).then(function (elasticContactList, duplicateContactIds) {
+        getElasticContactsByListId(data.Id).then(function (contactLists) {
+            var elasticContactList = contactLists[0];
+            var duplicateContactIds = contactLists[1];
+
             var contactsToDelete = [];
             var elasticContactListKeys = Object.keys(elasticContactList);
-
-            console.log(mediaListContactToMap);
-            console.log(elasticContactList);
-            console.log(duplicateContactIds);
 
             for (var i = elasticContactListKeys.length - 1; i >= 0; i--) {
                 if (!(elasticContactListKeys[i] in mediaListContactToMap)) {
@@ -148,6 +165,7 @@ function syncList(data) {
                 }
             }
 
+            console.log(duplicateContactIds);
             console.log(contactsToDelete);
         }, function (error) {
             deferred.reject(new Error(error));
@@ -177,4 +195,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-testSync({Id: '6463980541313024'})
+testSync({Id: '4754319148580864'})
