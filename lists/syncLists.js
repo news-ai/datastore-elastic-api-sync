@@ -108,12 +108,21 @@ function getElasticContactsByListId(listId) {
     }).then(function(resp) {
         var hits = resp.hits.hits;
         var contactIdToElasticId = {};
+        var duplicateContactIds = {};
 
         for (var i = hits.length - 1; i >= 0; i--) {
             contactIdToElasticId[hits[i]._source.data.Id] = hits[i]._id;
-        }
 
-        deferred.resolve(contactIdToElasticId);
+            if (hits[i]._source.data.Id in duplicateContactIds) {
+                duplicateContactIds[hits[i]._source.data.Id] += 1;
+            } else {
+                duplicateContactIds[hits[i]._source.data.Id] = 1;
+            }
+        }
+        
+        console.log(duplicateContactIds);
+
+        deferred.resolve(contactIdToElasticId, duplicateContactIds);
     }, function(err) {
         console.trace(err.message);
         deferred.reject(new Error(err.message));
@@ -124,11 +133,22 @@ function getElasticContactsByListId(listId) {
 
 function syncList(data) {
     var deferred = Q.defer();
-    mediaListToContactMap(data).then(function(mediaListContactToHashMap) {
-        getElasticContactsByListId(data.Id).then(function (elasticContactList) {
+    mediaListToContactMap(data).then(function(mediaListContactToMap) {
+        getElasticContactsByListId(data.Id).then(function (elasticContactList, duplicateContactIds) {
             var contactsToDelete = [];
-            console.log(mediaListContactToHashMap);
+            var elasticContactListKeys = Object.keys(elasticContactList);
+
+            console.log(mediaListContactToMap);
             console.log(elasticContactList);
+            console.log(duplicateContactIds);
+
+            for (var i = elasticContactListKeys.length - 1; i >= 0; i--) {
+                if (!(elasticContactListKeys[i] in mediaListContactToMap)) {
+                    contactsToDelete.push(elasticContactList[elasticContactListKeys[i]]);
+                }
+            }
+
+            console.log(contactsToDelete);
         }, function (error) {
             deferred.reject(new Error(error));
             throw new Error(error);
@@ -157,4 +177,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-testSync({Id: '5641762471149568'})
+testSync({Id: '6463980541313024'})
