@@ -81,6 +81,7 @@ function getDatastore(data, resouceType) {
 function mediaListToContactMap(mediaListId) {
     var deferred = Q.defer();
 
+    // Get a particular media list by its Id then create a map out of it
     getDatastore(mediaListId, 'MediaList').then(function(mediaList) {
         if ('Contacts' in mediaList.data) {
             var mediaListContactToHashMap = {};
@@ -104,7 +105,7 @@ function getElasticContactsByListId(listId) {
     client.search({
         index: 'contacts',
         type: 'contact',
-        size: 10000,
+        size: 1000,
         body: {
             query: {
                 match: {
@@ -151,7 +152,10 @@ function getElasticContactsByListId(listId) {
  */
 function syncList(data) {
     var deferred = Q.defer();
+
+    // Get a map of media list from id to boolean (easily searchable)
     mediaListToContactMap(data).then(function(mediaListContactToMap) {
+        // Get a API Id to ES Id map, and a duplicate list array
         getElasticContactsByListId(data.Id).then(function (contactLists) {
             var elasticContactList = contactLists[0];
             var duplicateContactIds = contactLists[1];
@@ -169,8 +173,6 @@ function syncList(data) {
                 contactsToDelete.push(elasticContactList[duplicateContactIds[i]]);
             }
 
-            console.log(contactsToDelete);
-
             // Remove unnecessary contacts
             var esActions = [];
             for (var i = contactsToDelete.length - 1; i >= 0; i--) {
@@ -184,7 +186,7 @@ function syncList(data) {
                 esActions.push(eachRecord);
             }
 
-            // Remove contacts
+            // Remove contacts from ES that are not important anymore
             client.bulk({
                 body: esActions
             }, function(error, response) {
@@ -219,4 +221,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-testSync({Id: '5024727873617920'})
+// testSync({Id: '5024727873617920'})
