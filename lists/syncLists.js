@@ -117,37 +117,37 @@ function formatESContact(contactId, contactData) {
 function getContactsByIds(contactIds) {
     var deferred = Q.defer();
     try {
-        if (contactIds.length === 0) {
-            deferred.resolve([]);
-        }
-
         var contactKeys = [];
         for (var i = contactIds.length - 1; i >= 0; i--) {
             var key = datastore.key(['Contact', contactKeys[i]]);
             contactKeys.push(key);
         }
 
-        datastore.get(contactKeys, function(err, entities) {
-            if (err) {
-                console.error(err);
-                deferred.reject(new Error(error));
-            }
+        if (contactKeys.length !== 0) {
+            datastore.get(contactKeys, function(err, entities) {
 
-            // The get operation will not fail for a non-existent entities, it just
-            // returns null.
-            if (!entities) {
-                var error = 'Entities do not exist';
-                console.error(error);
-                deferred.reject(new Error(error));
-            }
+                if (err) {
+                    console.error(err);
+                    deferred.reject(new Error(error));
+                }
 
-            for (var i = entities.length - 1; i >= 0; i--) {
-                entities[i] = formatESContact(contactKeys[i], entities[i]);
-            }
+                // The get operation will not fail for a non-existent entities, it just
+                // returns null.
+                if (!entities) {
+                    var error = 'Entities do not exist';
+                    console.error(error);
+                    deferred.reject(new Error(error));
+                }
 
-            deferred.resolve(entities);
-        });
+                for (var i = entities.length - 1; i >= 0; i--) {
+                    entities[i] = formatESContact(contactKeys[i], entities[i]);
+                }
 
+                deferred.resolve(entities);
+            });
+        } else {
+            deferred.resolve([]);
+        }
     } catch (err) {
         console.error(err);
         deferred.reject(new Error(error));
@@ -272,12 +272,15 @@ function syncList(data) {
                     esActions.push(dataRecord);
                 }
                 // Remove contacts from ES that are not important anymore
-                client.bulk({
-                    body: esActions
-                }, function(error, response) {
+                if (esActions.length > 0) {
+                    client.bulk({
+                        body: esActions
+                    }, function(error, response) {
+                        deferred.resolve(true);
+                    });
+                } else {
                     deferred.resolve(true);
-                });
-
+                }
             });
 
         }, function (error) {
@@ -308,4 +311,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-// testSync({Id: '5111570501730304'})
+testSync({Id: '5111570501730304'})
