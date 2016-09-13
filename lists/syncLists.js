@@ -119,7 +119,9 @@ function getContactsByIds(contactIds) {
     try {
         var contactKeys = [];
         for (var i = contactIds.length - 1; i >= 0; i--) {
-            var key = getKeyFromRequestData({Id: contactIds[i]}, 'Contact');
+            var key = getKeyFromRequestData({
+                Id: contactIds[i]
+            }, 'Contact');
             contactKeys.push(key);
         }
 
@@ -216,7 +218,7 @@ function syncList(data) {
     // Get a map of media list from id to boolean (easily searchable)
     mediaListToContactMap(data).then(function(mediaListContactToMap) {
         // Get a API Id to ES Id map, and a duplicate list array
-        getElasticContactsByListId(data.Id).then(function (contactLists) {
+        getElasticContactsByListId(data.Id).then(function(contactLists) {
             var elasticContactList = contactLists[0];
             var duplicateContactIds = contactLists[1];
 
@@ -268,7 +270,9 @@ function syncList(data) {
                     };
                     var dataRecord = contacts[i];
                     esActions.push(indexRecord);
-                    esActions.push({data: dataRecord});
+                    esActions.push({
+                        data: dataRecord
+                    });
                 }
                 // Remove contacts from ES that are not important anymore
                 if (esActions.length > 0) {
@@ -282,7 +286,7 @@ function syncList(data) {
                 }
             });
 
-        }, function (error) {
+        }, function(error) {
             deferred.reject(new Error(error));
             throw new Error(error);
         });
