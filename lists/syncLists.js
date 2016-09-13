@@ -96,6 +96,67 @@ function mediaListToContactMap(mediaListId) {
 }
 
 /**
+ * Format a contact for ES sync
+ *
+ * @param {Object} contactData Contact details from datastore.
+ */
+function formatESContact(contactId, contactData) {
+    contactData['Id'] = contactId;
+
+    if ('CustomFields.Name' in contactData) {
+        delete contactData["CustomFields.Name"];
+    }
+
+    if ('CustomFields.Value' in contactData) {
+        delete contactData["CustomFields.Value"];
+    }
+
+    return contactData;
+}
+
+function getContactsByIds(contactIds) {
+    var deferred = Q.defer();
+    try {
+        if (contactIds.length === 0) {
+            deferred.resolve([]);
+        }
+
+        var contactKeys = [];
+        for (var i = contactIds.length - 1; i >= 0; i--) {
+            var key = datastore.key(['Contact', contactKeys[i]]);
+            contactKeys.push(key);
+        }
+
+        datastore.get(contactKeys, function(err, entities) {
+            if (err) {
+                console.error(err);
+                deferred.reject(new Error(error));
+            }
+
+            // The get operation will not fail for a non-existent entities, it just
+            // returns null.
+            if (!entities) {
+                var error = 'Entities do not exist';
+                console.error(error);
+                deferred.reject(new Error(error));
+            }
+
+            for (var i = entities.length - 1; i >= 0; i--) {
+                entities[i] = formatESContact(contactKeys[i], entities[i]);
+            }
+
+            deferred.resolve(entities);
+        });
+
+    } catch (err) {
+        console.error(err);
+        deferred.reject(new Error(error));
+    }
+
+    return deferred.promise;
+}
+
+/**
  * Gets all the contacts in ElasticSearch for a particular list
  * Returns a contact Id to ElasticId list and an array of duplicate mediaList ids
  */
@@ -160,17 +221,28 @@ function syncList(data) {
             var elasticContactList = contactLists[0];
             var duplicateContactIds = contactLists[1];
 
-            var contactsToDelete = [];
+            var contactsToDelete = []; // This would be ES ids
+            var contactsToAdd = []; // This would be API ids
+            var mediaContactListKeys = Object.keys(mediaListContactToMap);
             var elasticContactListKeys = Object.keys(elasticContactList);
 
+            // Loop through to find contacts that shouldn't be in ES
             for (var i = elasticContactListKeys.length - 1; i >= 0; i--) {
                 if (!(elasticContactListKeys[i] in mediaListContactToMap)) {
                     contactsToDelete.push(elasticContactList[elasticContactListKeys[i]]);
                 }
             }
 
+            // Loop through to find duplicate contacts that shouldn't be in ES
             for (var i = duplicateContactIds.length - 1; i >= 0; i--) {
                 contactsToDelete.push(elasticContactList[duplicateContactIds[i]]);
+            }
+
+            // Loop through to find contacts that should be in ES
+            for (var i = mediaContactListKeys.length - 1; i >= 0; i--) {
+                if (!(mediaContactListKeys[i] in elasticContactList)) {
+                    contactsToAdd.push(mediaContactListKeys[i]);
+                }
             }
 
             // Remove unnecessary contacts
@@ -186,11 +258,26 @@ function syncList(data) {
                 esActions.push(eachRecord);
             }
 
-            // Remove contacts from ES that are not important anymore
-            client.bulk({
-                body: esActions
-            }, function(error, response) {
-                deferred.resolve(true);
+            // Add and format contacts that should be added
+            getContactsByIds(contactsToAdd).then(function(contacts) {
+                for (var i = contacts.length - 1; i >= 0; i--) {
+                    var indexRecord = {
+                        index: {
+                            _index: 'contacts',
+                            _type: 'contact'
+                        }
+                    };
+                    var dataRecord = contacts[i];
+                    esActions.push(eachRecord);
+                    esActions.push(dataRecord);
+                }
+                // Remove contacts from ES that are not important anymore
+                client.bulk({
+                    body: esActions
+                }, function(error, response) {
+                    deferred.resolve(true);
+                });
+
             });
 
         }, function (error) {
