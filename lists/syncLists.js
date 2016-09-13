@@ -119,7 +119,7 @@ function getContactsByIds(contactIds) {
     try {
         var contactKeys = [];
         for (var i = contactIds.length - 1; i >= 0; i--) {
-            var key = datastore.key(['Contact', contactIds[i]]);
+            var key = getKeyFromRequestData({Id: contactIds[i]}, 'Contact');
             contactKeys.push(key);
         }
 
@@ -139,7 +139,7 @@ function getContactsByIds(contactIds) {
                 }
 
                 for (var i = entities.length - 1; i >= 0; i--) {
-                    entities[i] = formatESContact(contactKeys[i], entities[i]);
+                    entities[i] = formatESContact(entities[i].key.id, entities[i].data);
                 }
 
                 deferred.resolve(entities);
@@ -267,8 +267,8 @@ function syncList(data) {
                         }
                     };
                     var dataRecord = contacts[i];
-                    esActions.push(eachRecord);
-                    esActions.push(dataRecord);
+                    esActions.push(indexRecord);
+                    esActions.push({data: dataRecord});
                 }
                 // Remove contacts from ES that are not important anymore
                 if (esActions.length > 0) {
@@ -310,4 +310,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-// testSync({Id: '5168618539057152'})
+// testSync({Id: '5647943331741696'})
