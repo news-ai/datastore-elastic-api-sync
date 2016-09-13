@@ -119,13 +119,12 @@ function getContactsByIds(contactIds) {
     try {
         var contactKeys = [];
         for (var i = contactIds.length - 1; i >= 0; i--) {
-            var key = datastore.key(['Contact', contactKeys[i]]);
+            var key = datastore.key(['Contact', contactIds[i]]);
             contactKeys.push(key);
         }
 
         if (contactKeys.length !== 0) {
             datastore.get(contactKeys, function(err, entities) {
-
                 if (err) {
                     console.error(err);
                     deferred.reject(new Error(error));
@@ -311,4 +310,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-testSync({Id: '5111570501730304'})
+// testSync({Id: '5168618539057152'})
