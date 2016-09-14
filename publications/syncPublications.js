@@ -135,6 +135,33 @@ function getAndSyncElastic(publication) {
     return deferred.promise;
 }
 
+function syncPublication(data) {
+    var deferred = Q.defer();
+
+    getDatastore(data).then(function(publication) {
+        if (publication != null) {
+            getAndSyncElastic(publication).then(function(elasticResponse) {
+                if (elasticResponse) {
+                    deferred.resolve(true);
+                } else {
+                    var error = 'Elastic sync failed';
+                    deferred.reject(new Error(error));
+                    throw new Error(error);
+                }
+            });
+        } else {
+            var error = 'Elastic sync failed';
+            deferred.reject(new Error(error));
+            throw new Error(error);
+        }
+    }, function(error) {
+        deferred.reject(new Error(error));
+        throw new Error(error);
+    });
+
+    return deferred.promise;
+};
+
 /**
  * Triggered from a message on a Pub/Sub topic.
  *
@@ -144,21 +171,6 @@ function getAndSyncElastic(publication) {
  * @param {Object} data Request data, in this case an object provided by the Pub/Sub trigger.
  * @param {Object} data.message Message that was published via Pub/Sub.
  */
-exports.syncPublications = function syncPublications(context, data) {
-    getDatastore(data).then(function(publication) {
-        if (publication != null) {
-            getAndSyncElastic(publication).then(function(elasticResponse) {
-                if (elasticResponse) {
-                    context.success();
-                } else {
-                    context.failure('Elastic sync failed');
-                }
-            });
-        } else {
-            context.failure('Publication not found');
-        }
-    }, function(error) {
-        console.error(error);
-        context.failure(err);
-    });
+exports.syncPublications = function syncPublications(data) {
+    return syncPublication(data);
 };
