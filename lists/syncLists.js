@@ -294,6 +294,7 @@ function syncList(data) {
         deferred.reject(new Error(error));
         throw new Error(error);
     });
+
     return deferred.promise;
 }
 
