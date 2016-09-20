@@ -104,11 +104,13 @@ function formatESContact(contactId, contactData) {
     contactData['Id'] = contactId;
 
     if ('CustomFields.Name' in contactData) {
-        delete contactData["CustomFields.Name"];
+        contactData['CustomFields-Name'] = contactData['CustomFields.Name'];
+        delete contactData['CustomFields.Name'];
     }
 
     if ('CustomFields.Value' in contactData) {
-        delete contactData["CustomFields.Value"];
+        contactData['CustomFields-Value'] = contactData['CustomFields.Value'];
+        delete contactData['CustomFields.Value'];
     }
 
     return contactData;
