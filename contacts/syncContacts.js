@@ -103,13 +103,18 @@ function mediaListToContactMap(mediaListId) {
 function formatESContact(contactId, contactData) {
     contactData['Id'] = contactId;
 
-    if ('CustomFields.Name' in contactData) {
-        contactData['CustomFields-Name'] = contactData['CustomFields.Name'];
-        delete contactData['CustomFields.Name'];
-    }
+    if ('CustomFields.Name' in contactData && 'CustomFields.Value' in contactData) {
+        // Populate a column for contactData
+        contactData['CustomFields'] = [];
+        for (var i = contactData['CustomFields.Name'].length - 1; i >= 0; i--) {
+            var singleData = {};
+            singleData.Name = contactData['CustomFields.Name'][i];
+            singleData.Value = contactData['CustomFields.Value'][i];
+            contactData['CustomFields'].push(singleData);
+        }
 
-    if ('CustomFields.Value' in contactData) {
-        contactData['CustomFields-Value'] = contactData['CustomFields.Value'];
+        // Remove the name and value fields
+        delete contactData['CustomFields.Name'];
         delete contactData['CustomFields.Value'];
     }
 
