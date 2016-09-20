@@ -53,7 +53,7 @@ function getDatastore(data, resouceType) {
         datastore.get(key, function(err, entity) {
             if (err) {
                 console.error(err);
-                deferred.reject(new Error(error));
+                deferred.reject(new Error(err));
             }
 
             // The get operation will not fail for a non-existent entity, it just
@@ -69,7 +69,7 @@ function getDatastore(data, resouceType) {
 
     } catch (err) {
         console.error(err);
-        deferred.reject(new Error(error));
+        deferred.reject(new Error(err));
     }
 
     return deferred.promise;
@@ -136,6 +136,7 @@ function addToElastic(contactId, contactData) {
             client.create({
                 index: 'contacts',
                 type: 'contact',
+                _id: contactId,
                 body: {
                     data: postContactData
                 }
