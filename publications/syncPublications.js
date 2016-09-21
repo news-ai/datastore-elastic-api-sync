@@ -98,6 +98,7 @@ function addToElastic(publicationId, publicationData) {
     client.create({
         index: 'publications',
         type: 'publication',
+        _id: publicationId,
         body: {
             data: postPublicationData
         }

@@ -272,7 +272,8 @@ function syncList(data) {
                     var indexRecord = {
                         index: {
                             _index: 'contacts',
-                            _type: 'contact'
+                            _type: 'contact',
+                            _id: contacts[i].Id
                         }
                     };
                     var dataRecord = contacts[i];
