@@ -1,5 +1,6 @@
 'use strict';
 
+var raven = require('raven');
 var elasticsearch = require('elasticsearch');
 var Q = require('q');
 
@@ -14,6 +15,10 @@ var client = new elasticsearch.Client({
     // log: 'trace',
     rejectUnauthorized: false
 });
+
+// Instantiate a sentry client
+var sentryClient = new raven.Client('https://f4ab035568994293b9a2a90727ccb5fc:a6dc87433f284952b2b5d629422ef7e6@sentry.io/103134');
+sentryClient.patchGlobal();
 
 /**
  * Gets a Datastore key from the kind/key pair in the request.
@@ -53,6 +58,7 @@ function getDatastore(data, resouceType) {
         datastore.get(key, function(err, entity) {
             if (err) {
                 console.error(err);
+                sentryClient.captureMessage(err);
                 deferred.reject(new Error(err));
             }
 
@@ -61,6 +67,7 @@ function getDatastore(data, resouceType) {
             if (!entity) {
                 var error = 'Entity does not exist';
                 console.error(error);
+                sentryClient.captureMessage(error);
                 deferred.reject(new Error(error));
             }
 
@@ -69,6 +76,7 @@ function getDatastore(data, resouceType) {
 
     } catch (err) {
         console.error(err);
+        sentryClient.captureMessage(err);
         deferred.reject(new Error(err));
     }
 
@@ -143,6 +151,7 @@ function addToElastic(contactId, contactData) {
             }, function(error, response) {
                 if (error) {
                     console.error(error);
+                    sentryClient.captureMessage(error);
                     deferred.resolve(false);
                 } else {
                     deferred.resolve(true);
@@ -216,6 +225,7 @@ function getAndSyncElastic(contact) {
         }
     }, function(err) {
         console.trace(err.message);
+        sentryClient.captureMessage(err.message);
         deferred.reject(new Error(err.message));
     });
 
@@ -231,16 +241,19 @@ function syncContact(data) {
                     deferred.resolve('Success!');
                 } else {
                     var error = "Elastic sync failed";
+                    sentryClient.captureMessage(error);
                     deferred.reject(new Error(error));
                     throw new Error(error);
                 }
             });
         } else {
             var error = "Contact not found";
+            sentryClient.captureMessage(error);
             deferred.reject(new Error(error));
             throw new Error(error);
         }
     }, function(error) {
+        sentryClient.captureMessage(error);
         deferred.reject(new Error(error));
         throw new Error(error);
     });
