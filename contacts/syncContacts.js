@@ -29,8 +29,8 @@ sentryClient.patchGlobal();
  */
 function getKeyFromRequestData(requestData, resouceType) {
     if (!requestData.Id) {
-        throw new Error('Id not provided. Make sure you have a "Id" property ' +
-            'in your request');
+        throw new Error("Id not provided. Make sure you have a 'Id' property " +
+            "in your request");
     }
 
     var contactId = parseInt(requestData.Id, 10);
@@ -41,13 +41,13 @@ function getKeyFromRequestData(requestData, resouceType) {
  * Retrieves a record.
  *
  * @example
- * gcloud alpha functions call ds-get --data '{"kind":"gcf-test","key":"foobar"}'
+ * gcloud alpha functions call ds-get --data '{'kind':'gcf-test','key':'foobar'}'
  *
  * @param {Object} context Cloud Function context.
  * @param {Function} context.success Success callback.
  * @param {Function} context.failure Failure callback.
  * @param {Object} data Request data, in this case an object provided by the user.
- * @param {string} data.kind The Datastore kind of the data to retrieve, e.g. "user".
+ * @param {string} data.kind The Datastore kind of the data to retrieve, e.g. 'user'.
  * @param {string} data.key Key at which to retrieve the data, e.g. 5075192766267392.
  */
 function getDatastore(data, resouceType) {
@@ -232,31 +232,83 @@ function getAndSyncElastic(contact) {
     return deferred.promise;
 }
 
+function removeContactFromElastic(contactId) {
+    var deferred = Q.defer();
+
+    var esActions = [];
+    var eachRecord = {
+        delete: {
+            _index: 'contacts',
+            _type: 'contact',
+            _id: contactId
+        }
+    };
+    esActions.push(eachRecord);
+
+    client.bulk({
+        body: esActions
+    }, function(error, response) {
+        if (error) {
+            deferred.resolve(false);
+        } else {
+            deferred.resolve(true);
+        }
+    });
+
+    return deferred.promise;
+}
+
 function syncContact(data) {
     var deferred = Q.defer();
-    getDatastore(data, 'Contact').then(function(contact) {
-        if (contact != null) {
-            getAndSyncElastic(contact).then(function(elasticResponse) {
-                if (elasticResponse) {
-                    deferred.resolve('Success!');
-                } else {
-                    var error = "Elastic sync failed";
-                    sentryClient.captureMessage(error);
-                    deferred.reject(new Error(error));
-                    throw new Error(error);
-                }
-            });
-        } else {
-            var error = "Contact not found";
+    if (data.Method && data.Method.toLowerCase() === 'create') {
+        getDatastore(data, 'Contact').then(function(contact) {
+            if (contact != null) {
+                getAndSyncElastic(contact).then(function(elasticResponse) {
+                    if (elasticResponse) {
+                        deferred.resolve('Success!');
+                    } else {
+                        var error = 'Elastic sync failed';
+                        sentryClient.captureMessage(error);
+                        deferred.reject(new Error(error));
+                        throw new Error(error);
+                    }
+                });
+            } else {
+                var error = 'Contact not found';
+                sentryClient.captureMessage(error);
+                deferred.reject(new Error(error));
+                throw new Error(error);
+            }
+        }, function(error) {
             sentryClient.captureMessage(error);
             deferred.reject(new Error(error));
             throw new Error(error);
+        });
+    } else if (data.Method && data.Method.toLowerCase() === 'delete') {
+        if (!data.Id) {
+            throw new Error("Id not provided. Make sure you have a 'Id' property " +
+                "in your request");
         }
-    }, function(error) {
+
+        var contactId = parseInt(data.Id, 10);
+        removeContactFromElastic(contactId).then(function(elasticResponse) {
+            if (elasticResponse) {
+                deferred.resolve('Success!');
+            } else {
+                var error = 'Elastic removal failed for ' + data.Id;
+                sentryClient.captureMessage(error);
+                deferred.reject(new Error(error));
+                throw new Error(error);
+            }
+        });
+    } else {
+        // This case should never happen unless wrong pub/sub method is called.
+        var error = 'Can not parse method ' + data.Method;
         sentryClient.captureMessage(error);
         deferred.reject(new Error(error));
         throw new Error(error);
-    });
+    }
+
     return deferred.promise;
 }
 
