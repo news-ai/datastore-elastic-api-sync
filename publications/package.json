@@ -9,7 +9,8 @@
   "dependencies": {
     "@google-cloud/datastore": "^0.1.1",
     "elasticsearch": "^11.0.1",
-    "q": "^1.4.1"
+    "q": "^1.4.1",
+    "raven": "^0.12.1"
   },
   "author": "NewsAI",
   "license": "ISC"

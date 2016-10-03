@@ -1,5 +1,6 @@
 'use strict';
 
+var raven = require('raven');
 var elasticsearch = require('elasticsearch');
 var Q = require('q');
 
@@ -14,6 +15,10 @@ var client = new elasticsearch.Client({
     log: 'trace',
     rejectUnauthorized: false
 });
+
+// Instantiate a sentry client
+var sentryClient = new raven.Client('https://c2b3c727812f4643b73f40bee09e5108:fed6658dfeb94757b53cb062e81cdc68@sentry.io/103136');
+sentryClient.patchGlobal();
 
 /**
  * Gets a Datastore key from the kind/key pair in the request.
@@ -53,7 +58,8 @@ function getDatastore(data) {
         datastore.get(key, function(err, entity) {
             if (err) {
                 console.error(err);
-                deferred.reject(new Error(error));
+                sentryClient.captureMessage(err);
+                deferred.reject(new Error(err));
             }
 
             // The get operation will not fail for a non-existent entity, it just
@@ -61,6 +67,7 @@ function getDatastore(data) {
             if (!entity) {
                 var error = 'Entity does not exist';
                 console.error(error);
+                sentryClient.captureMessage(error);
                 deferred.reject(new Error(error));
             }
 
@@ -69,7 +76,8 @@ function getDatastore(data) {
 
     } catch (err) {
         console.error(err);
-        deferred.reject(new Error(error));
+        sentryClient.captureMessage(err);
+        deferred.reject(new Error(err));
     }
 
     return deferred.promise;
@@ -105,6 +113,7 @@ function addToElastic(publicationId, publicationData) {
     }, function(error, response) {
         if (error) {
             console.error(error);
+            sentryClient.captureMessage(error);
             deferred.resolve(false);
         } else {
             deferred.resolve(true);
@@ -146,16 +155,19 @@ function syncPublication(data) {
                     deferred.resolve(true);
                 } else {
                     var error = 'Elastic sync failed';
+                    sentryClient.captureMessage(error);
                     deferred.reject(new Error(error));
                     throw new Error(error);
                 }
             });
         } else {
             var error = 'Elastic sync failed';
+            sentryClient.captureMessage(error);
             deferred.reject(new Error(error));
             throw new Error(error);
         }
     }, function(error) {
+        sentryClient.captureMessage(error);
         deferred.reject(new Error(error));
         throw new Error(error);
     });
