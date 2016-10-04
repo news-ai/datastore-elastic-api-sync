@@ -83,26 +83,6 @@ function getDatastore(data, resouceType) {
     return deferred.promise;
 }
 
-function mediaListToContactMap(mediaListId) {
-    var deferred = Q.defer();
-
-    var data = {
-        Id: mediaListId
-    };
-
-    getDatastore(data, 'MediaList').then(function(mediaList) {
-        if ('Contacts' in mediaList.data) {
-            var mediaListContactToHashMap = {};
-            for (var i = mediaList.data.Contacts.length - 1; i >= 0; i--) {
-                mediaListContactToHashMap[mediaList.data.Contacts[i]] = true;
-            }
-            deferred.resolve(mediaListContactToHashMap);
-        }
-    });
-
-    return deferred.promise;
-}
-
 /**
  * Format a contact for ES sync
  *
@@ -139,24 +119,20 @@ function addToElastic(contactId, contactData) {
     var deferred = Q.defer();
 
     var postContactData = formatESContact(contactId, contactData);
-    mediaListToContactMap(contactData['ListId']).then(function(mediaListContactToHashMap) {
-        if (contactId in mediaListContactToHashMap) {
-            client.create({
-                index: 'contacts',
-                type: 'contact',
-                _id: contactId,
-                body: {
-                    data: postContactData
-                }
-            }, function(error, response) {
-                if (error) {
-                    console.error(error);
-                    sentryClient.captureMessage(error);
-                    deferred.resolve(false);
-                } else {
-                    deferred.resolve(true);
-                }
-            });
+    client.create({
+        index: 'contacts',
+        type: 'contact',
+        _id: contactId.toString(),
+        body: {
+            data: postContactData
+        }
+    }, function(error, response) {
+        if (error) {
+            console.error(error);
+            sentryClient.captureMessage(error);
+            deferred.resolve(false);
+        } else {
+            deferred.resolve(true);
         }
     });
 
@@ -174,59 +150,12 @@ function getAndSyncElastic(contact) {
     var contactData = contact.data;
     var contactId = contact.key.id;
 
-    client.search({
-        index: 'contacts',
-        type: 'contact',
-        size: 10000,
-        body: {
-            query: {
-                match: {
-                    'data.Id': contactId
-                }
-            }
-        }
-    }).then(function(resp) {
-        var hits = resp.hits.hits;
-
-        // Delete the current hit
-        if (hits.length > 0) {
-            var esActions = [];
-            for (var i = hits.length - 1; i >= 0; i--) {
-                var eachRecord = {
-                    delete: {
-                        _index: 'contacts',
-                        _type: 'contact',
-                        _id: hits[i]._id
-                    }
-                };
-                esActions.push(eachRecord);
-            }
-
-            client.bulk({
-                body: esActions
-            }, function(error, response) {
-                // Add a new index
-                addToElastic(contactId, contactData).then(function(status) {
-                    if (status) {
-                        deferred.resolve(true);
-                    } else {
-                        deferred.resolve(false);
-                    }
-                });
-            });
+    addToElastic(contactId, contactData).then(function(status) {
+        if (status) {
+            deferred.resolve(true);
         } else {
-            addToElastic(contactId, contactData).then(function(status) {
-                if (status) {
-                    deferred.resolve(true);
-                } else {
-                    deferred.resolve(false);
-                }
-            });
+            deferred.resolve(false);
         }
-    }, function(err) {
-        console.trace(err.message);
-        sentryClient.captureMessage(err.message);
-        deferred.reject(new Error(err.message));
     });
 
     return deferred.promise;
