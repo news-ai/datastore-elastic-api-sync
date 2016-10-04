@@ -118,22 +118,30 @@ function formatESContact(contactId, contactData) {
 function addToElastic(contactId, contactData) {
     var deferred = Q.defer();
 
+    var esActions = [];
     var postContactData = formatESContact(contactId, contactData);
-    client.create({
-        index: 'contacts',
-        type: 'contact',
-        _id: contactId.toString(),
-        body: {
-            data: postContactData
+
+    var indexRecord = {
+        index: {
+            _index: 'contacts',
+            _type: 'contact',
+            _id: contactId
         }
+    };
+    var dataRecord = postContactData;
+    esActions.push(indexRecord);
+    esActions.push({
+        data: dataRecord
+    });
+
+    client.bulk({
+        body: esActions
     }, function(error, response) {
         if (error) {
-            console.error(error);
             sentryClient.captureMessage(error);
-            deferred.resolve(false);
-        } else {
-            deferred.resolve(true);
+            deferred.reject(false);
         }
+        deferred.resolve(true);
     });
 
     return deferred.promise;
