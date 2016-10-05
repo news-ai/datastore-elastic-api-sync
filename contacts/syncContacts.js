@@ -277,4 +277,4 @@ function testSync(data) {
     return syncContact(data);
 };
 
-testSync({Id: '6095325244686336', Method: 'create'})
+// testSync({Id: '6095325244686336', Method: 'create'})
