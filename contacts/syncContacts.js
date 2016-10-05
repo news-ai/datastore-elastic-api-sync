@@ -146,8 +146,6 @@ function addToElastic(contacts) {
         });
     }
 
-    console.log(esActions);
-
     client.bulk({
         body: esActions
     }, function(error, response) {
