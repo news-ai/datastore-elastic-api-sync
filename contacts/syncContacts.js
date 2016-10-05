@@ -27,14 +27,22 @@ sentryClient.patchGlobal();
  * @param {string} requestData.Id Datastore ID string.
  * @returns {Object} Datastore key object.
  */
-function getKeyFromRequestData(requestData, resouceType) {
+function getKeysFromRequestData(requestData, resouceType) {
     if (!requestData.Id) {
         throw new Error("Id not provided. Make sure you have a 'Id' property " +
             "in your request");
     }
 
-    var contactId = parseInt(requestData.Id, 10);
-    return datastore.key([resouceType, contactId]);
+    var ids = requestData.Id.split(',');
+    var keys = [];
+
+    for (var i = ids.length - 1; i >= 0; i--) {
+        var contactId = parseInt(ids[i], 10);
+        var datastoreId = datastore.key([resouceType, contactId]);
+        keys.push(datastoreId);
+    }
+
+    return keys;
 }
 
 /**
@@ -53,25 +61,25 @@ function getKeyFromRequestData(requestData, resouceType) {
 function getDatastore(data, resouceType) {
     var deferred = Q.defer();
     try {
-        var key = getKeyFromRequestData(data, resouceType);
+        var keys = getKeysFromRequestData(data, resouceType);
 
-        datastore.get(key, function(err, entity) {
+        datastore.get(keys, function(err, entities) {
             if (err) {
                 console.error(err);
                 sentryClient.captureMessage(err);
                 deferred.reject(new Error(err));
             }
 
-            // The get operation will not fail for a non-existent entity, it just
+            // The get operation will not fail for a non-existent entities, it just
             // returns null.
-            if (!entity) {
+            if (!entities) {
                 var error = 'Entity does not exist';
                 console.error(error);
                 sentryClient.captureMessage(error);
                 deferred.reject(new Error(error));
             }
 
-            deferred.resolve(entity);
+            deferred.resolve(entities);
         });
 
     } catch (err) {
@@ -115,24 +123,30 @@ function formatESContact(contactId, contactData) {
  * @param {Object} contactData Contact details from datastore.
  * Returns true if adding data works and false if not.
  */
-function addToElastic(contactId, contactData) {
+function addToElastic(contacts) {
     var deferred = Q.defer();
-
     var esActions = [];
-    var postContactData = formatESContact(contactId, contactData);
 
-    var indexRecord = {
-        index: {
-            _index: 'contacts',
-            _type: 'contact',
-            _id: contactId
-        }
-    };
-    var dataRecord = postContactData;
-    esActions.push(indexRecord);
-    esActions.push({
-        data: dataRecord
-    });
+    for (var i = contacts.length - 1; i >= 0; i--) {
+        var contactId = contacts[i].key.id;
+        var contactData = contacts[i].data;
+        var postContactData = formatESContact(contactId, contactData);
+
+        var indexRecord = {
+            index: {
+                _index: 'contacts',
+                _type: 'contact',
+                _id: contactId
+            }
+        };
+        var dataRecord = postContactData;
+        esActions.push(indexRecord);
+        esActions.push({
+            data: dataRecord
+        });
+    }
+
+    console.log(esActions);
 
     client.bulk({
         body: esActions
@@ -152,13 +166,10 @@ function addToElastic(contactId, contactData) {
  *
  * @param {Object} contact Contact details from datastore.
  */
-function getAndSyncElastic(contact) {
+function getAndSyncElastic(contacts) {
     var deferred = Q.defer();
 
-    var contactData = contact.data;
-    var contactId = contact.key.id;
-
-    addToElastic(contactId, contactData).then(function(status) {
+    addToElastic(contacts).then(function(status) {
         if (status) {
             deferred.resolve(true);
         } else {
@@ -198,9 +209,9 @@ function removeContactFromElastic(contactId) {
 function syncContact(data) {
     var deferred = Q.defer();
     if (data.Method && data.Method.toLowerCase() === 'create') {
-        getDatastore(data, 'Contact').then(function(contact) {
-            if (contact != null) {
-                getAndSyncElastic(contact).then(function(elasticResponse) {
+        getDatastore(data, 'Contact').then(function(contacts) {
+            if (contacts != null) {
+                getAndSyncElastic(contacts).then(function(elasticResponse) {
                     if (elasticResponse) {
                         deferred.resolve('Success!');
                     } else {
@@ -266,4 +277,4 @@ function testSync(data) {
     return syncContact(data);
 };
 
-// testSync({Id: '6095325244686336'})
+testSync({Id: '6095325244686336', Method: 'create'})
