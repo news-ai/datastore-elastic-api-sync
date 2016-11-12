@@ -202,4 +202,4 @@ function testSync(data) {
     return syncUser(data);
 };
 
-testSync({Id: '5036688686448640'});
+// testSync({Id: '5036688686448640'});
