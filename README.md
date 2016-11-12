@@ -19,3 +19,9 @@ Get logs for publications: `gcloud alpha functions get-logs syncPublications`
 Deploy lists: `cd lists` then `gcloud alpha functions deploy syncLists --stage-bucket datastore_elastic_api_sync --trigger-topic datastore-sync-lists-functions --region us-central1`
 
 Get logs for lists: `gcloud alpha functions get-logs syncLists`
+
+### Users
+
+Deploy users: `cd users` then `gcloud alpha functions deploy syncUsers --stage-bucket datastore_elastic_api_sync --trigger-topic datastore-sync-users-functions --region us-central1`
+
+Get logs for users: `gcloud alpha functions get-logs syncUsers`

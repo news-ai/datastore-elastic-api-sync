@@ -227,4 +227,4 @@ function testSync(data) {
     return syncList(data);
 };
 
-testSync({Id: '5097453078446080', Method: 'create'})
+// testSync({Id: '5097453078446080', Method: 'create'})
