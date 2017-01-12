@@ -101,23 +101,31 @@ function formatESPublication(publicationId, publicationData) {
  */
 function addToElastic(publicationId, publicationData) {
     var deferred = Q.defer();
-
+    
+    var esActions = [];
     var postPublicationData = formatESPublication(publicationId, publicationData);
-    client.create({
-        index: 'publications',
-        type: 'publication',
-        _id: publicationId,
-        body: {
-            data: postPublicationData
+
+    var indexRecord = {
+        index: {
+            _index: 'publications',
+            _type: 'publication',
+            _id: publicationId
         }
+    };
+    var dataRecord = postPublicationData;
+    esActions.push(indexRecord);
+    esActions.push({
+        data: dataRecord
+    });
+
+    client.bulk({
+        body: esActions
     }, function(error, response) {
         if (error) {
-            console.error(error);
             sentryClient.captureMessage(error);
-            deferred.resolve(false);
-        } else {
-            deferred.resolve(true);
+            deferred.reject(false);
         }
+        deferred.resolve(true);
     });
 
     return deferred.promise;
