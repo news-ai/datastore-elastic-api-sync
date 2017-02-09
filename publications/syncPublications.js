@@ -12,7 +12,7 @@ var datastore = require('@google-cloud/datastore')({
 // Instantiate a elasticsearch client
 var client = new elasticsearch.Client({
     host: 'https://newsai:XkJRNRx2EGCd6@search1.newsai.org',
-    log: 'trace',
+    // log: 'trace',
     rejectUnauthorized: false
 });
 
@@ -33,8 +33,16 @@ function getKeyFromRequestData(requestData) {
             'in your request');
     }
 
-    var publicationId = parseInt(requestData.Id, 10);
-    return datastore.key(['Publication', publicationId]);
+    var ids = requestData.Id.split(',');
+    var keys = [];
+
+    for (var i = ids.length - 1; i >= 0; i--) {
+        var publicationId = parseInt(ids[i], 10);
+        var datastoreId = datastore.key(['Publication', publicationId]);
+        keys.push(datastoreId);
+    }
+
+    return keys;
 }
 
 /**
@@ -99,24 +107,29 @@ function formatESPublication(publicationId, publicationData) {
  * @param {Object} publicationData Publication details from datastore.
  * Returns true if adding data works and false if not.
  */
-function addToElastic(publicationId, publicationData) {
+function addToElastic(publications) {
     var deferred = Q.defer();
-    
     var esActions = [];
-    var postPublicationData = formatESPublication(publicationId, publicationData);
 
-    var indexRecord = {
-        index: {
-            _index: 'publications',
-            _type: 'publication',
-            _id: publicationId
-        }
-    };
-    var dataRecord = postPublicationData;
-    esActions.push(indexRecord);
-    esActions.push({
-        data: dataRecord
-    });
+    for (var i = 0; i < publications.length; i++) {
+        var publicationId = publications[i].key.id;
+        var publicationData = publications[i].data;
+        
+        var postPublicationData = formatESPublication(publicationId, publicationData);
+
+        var indexRecord = {
+            index: {
+                _index: 'publications',
+                _type: 'publication',
+                _id: publicationId
+            }
+        };
+        var dataRecord = postPublicationData;
+        esActions.push(indexRecord);
+        esActions.push({
+            data: dataRecord
+        });
+    }
 
     client.bulk({
         body: esActions
@@ -136,13 +149,10 @@ function addToElastic(publicationId, publicationData) {
  *
  * @param {Object} publication Publication details from datastore.
  */
-function getAndSyncElastic(publication) {
+function getAndSyncElastic(publications) {
     var deferred = Q.defer();
 
-    var publicationData = publication.data;
-    var publicationId = publication.key.id;
-
-    addToElastic(publicationId, publicationData).then(function(status) {
+    addToElastic(publications).then(function(status) {
         if (status) {
             deferred.resolve(true);
         } else {
@@ -195,3 +205,9 @@ function syncPublication(data) {
 exports.syncPublications = function syncPublications(data) {
     return syncPublication(data);
 };
+
+function testSync(data) {
+    return syncPublication(data);
+};
+
+// testSync({Id: '5852755692355584,5660158352949248', Method: 'create'})
